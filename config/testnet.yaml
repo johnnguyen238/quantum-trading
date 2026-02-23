@@ -1,0 +1,10 @@
+# Testnet-specific overrides (merged on top of default.yaml)
+exchange:
+  testnet: true
+
+trading:
+  max_leverage: 5
+  risk_per_trade: 0.01
+
+logging:
+  level: DEBUG

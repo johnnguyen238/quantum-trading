@@ -1,0 +1,15 @@
+# Backtest-specific overrides
+trading:
+  symbols:
+    - BTC/USDT:USDT
+  timeframe: 15m
+
+backtest:
+  start_date: "2024-01-01"
+  end_date: "2024-12-31"
+  initial_balance: 10000.0
+  fee_rate: 0.0006  # 0.06% taker fee
+  slippage: 0.0001  # 0.01%
+
+logging:
+  level: INFO

@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantum-trading-bot"
+version = "0.1.0"
+description = "Quantum algorithm cryptocurrency trading bot for Bybit"
+requires-python = ">=3.11"
+dependencies = [
+    "qiskit>=1.0",
+    "qiskit-aer>=0.13",
+    "qiskit-machine-learning>=0.7",
+    "ccxt>=4.0",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "ta>=0.11",
+    "aiosqlite>=0.19",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "pyyaml>=6.0",
+    "typer[all]>=0.9",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+quantum-bot = "src.main:app"
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

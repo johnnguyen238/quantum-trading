@@ -1,0 +1,38 @@
+exchange:
+  name: bybit
+  testnet: true
+  rate_limit: 50  # ms between requests
+
+trading:
+  symbols:
+    - BTC/USDT:USDT
+  timeframe: 15m
+  max_leverage: 10
+  risk_per_trade: 0.02  # 2% of balance per trade
+  max_open_positions: 3
+  dca_multiplier: 2  # each DCA = 2x previous size
+  max_dca_layers: 3
+
+quantum:
+  n_qubits: 4
+  reps: 2  # circuit repetitions
+  feature_map: ZZFeatureMap
+  ansatz: RealAmplitudes
+  optimizer: COBYLA
+  max_iterations: 100
+  confidence_threshold: 0.6  # minimum confidence for signal
+
+strategy:
+  lookback_period: 100  # candles for feature calculation
+  rsi_period: 14
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  atr_period: 14
+
+database:
+  path: data/trading.db
+
+logging:
+  level: INFO
+  format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
