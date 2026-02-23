@@ -49,7 +49,12 @@ def _deep_merge(base: dict, override: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 class ExchangeSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="BYBIT_")
+    model_config = SettingsConfigDict(
+        env_prefix="BYBIT_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     name: str = "bybit"
     testnet: bool = True

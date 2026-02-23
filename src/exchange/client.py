@@ -35,12 +35,20 @@ class BybitClient:
 
     async def connect(self) -> None:
         """Initialize the ccxt async Bybit instance."""
+        import aiohttp
+
+        # Use threaded resolver — aiohttp's AsyncResolver (c-ares) can fail
+        # on some Windows configurations even when system DNS works fine.
+        session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(resolver=aiohttp.ThreadedResolver())
+        )
         self._exchange = ccxt_async.bybit(
             {
                 "apiKey": self._settings.api_key,
                 "secret": self._settings.api_secret,
                 "enableRateLimit": True,
                 "rateLimit": self._settings.rate_limit,
+                "session": session,
                 "options": {
                     "defaultType": "swap",
                 },
