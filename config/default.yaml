@@ -10,17 +10,17 @@ trading:
   max_leverage: 10
   risk_per_trade: 0.02  # 2% of balance per trade
   max_open_positions: 3
-  dca_multiplier: 2  # each DCA = 2x previous size
-  max_dca_layers: 3
+  dca_multiplier: 1  # each DCA = 1x (match current position size)
+  max_dca_layers: 1  # limit DCA to 1 layer to reduce compounding risk
 
 quantum:
-  n_qubits: 4
-  reps: 2  # circuit repetitions
+  n_qubits: 6
+  reps: 3  # circuit repetitions
   feature_map: ZZFeatureMap
   ansatz: RealAmplitudes
   optimizer: COBYLA
-  max_iterations: 100
-  confidence_threshold: 0.6  # minimum confidence for signal
+  max_iterations: 300
+  confidence_threshold: 0.35  # minimum confidence for signal (3-class baseline ~0.33)
 
 strategy:
   lookback_period: 100  # candles for feature calculation

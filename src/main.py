@@ -85,6 +85,19 @@ def run(
     console.print("[green]Bot stopped.[/]")
 
 
+def _find_latest_model() -> str | None:
+    """Find the most recently saved model weights file in data/models/."""
+    from pathlib import Path
+
+    models_dir = Path("data/models")
+    if not models_dir.exists():
+        return None
+    npy_files = sorted(models_dir.glob("*.npy"), key=lambda p: p.stat().st_mtime)
+    if npy_files:
+        return str(npy_files[-1])
+    return None
+
+
 async def _run_backtest(settings, symbol: str, start: str, end: str, export: str | None) -> None:
     """Run a backtest asynchronously with full component setup."""
     from src.backtest.data_loader import DataLoader
@@ -118,10 +131,17 @@ async def _run_backtest(settings, symbol: str, start: str, end: str, export: str
         # Data loader
         data_loader = DataLoader(repo, client)
 
-        # Quantum detector
+        # Quantum detector — load latest trained model if available
+        model_weights_path = _find_latest_model()
+        if model_weights_path:
+            console.print(f"[dim]Loading trained model: {model_weights_path}[/]")
+        else:
+            console.print("[yellow]No trained model found, using random weights.[/]")
+
         detector = TrendDetector(
             quantum_settings=settings.quantum,
             strategy_settings=settings.strategy,
+            model_weights_path=model_weights_path,
         )
         await detector.initialize()
 

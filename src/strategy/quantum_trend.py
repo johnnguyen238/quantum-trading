@@ -48,6 +48,9 @@ class QuantumTrendStrategy(BaseStrategy):
         Default order size when opening a new position.
     confidence_threshold:
         Minimum confidence to act on a signal.
+    stop_loss_pct:
+        Maximum percentage loss before automatically closing a position.
+        E.g. ``0.05`` = 5% stop-loss.  Set to ``0`` to disable.
     """
 
     def __init__(
@@ -56,11 +59,13 @@ class QuantumTrendStrategy(BaseStrategy):
         dca_multiplier: int = 2,
         base_amount: float = 0.001,
         confidence_threshold: float = 0.6,
+        stop_loss_pct: float = 0.05,
     ) -> None:
         self._max_dca_layers = max_dca_layers
         self._dca_multiplier = dca_multiplier
         self._base_amount = base_amount
         self._confidence_threshold = confidence_threshold
+        self._stop_loss_pct = stop_loss_pct
         self._dca = DCACalculator(
             multiplier=dca_multiplier, max_layers=max_dca_layers
         )
@@ -95,6 +100,32 @@ class QuantumTrendStrategy(BaseStrategy):
 
         # Find position for this symbol (use first matching, if any)
         position = self._find_position(positions, symbol)
+
+        # --- Stop-loss check: close immediately if loss exceeds threshold ---
+        if position is not None and self._stop_loss_pct > 0:
+            entry_notional = position.entry_price * position.amount
+            if entry_notional > 0:
+                loss_pct = -position.unrealized_pnl / entry_notional
+                if loss_pct >= self._stop_loss_pct:
+                    actions.append(
+                        TradeAction(
+                            action="close",
+                            symbol=symbol,
+                            amount=position.amount,
+                            price=current_price,
+                            reason=(
+                                f"Stop-loss triggered: {loss_pct:.1%} loss "
+                                f"(threshold={self._stop_loss_pct:.1%})"
+                            ),
+                        )
+                    )
+                    logger.info(
+                        "STOP-LOSS: closing %s position at %.2f (loss=%.1f%%)",
+                        position.side.value,
+                        current_price,
+                        loss_pct * 100,
+                    )
+                    return StrategyResult(actions=actions, signal=signal)
 
         if position is None:
             # No open position → open new one in signal direction

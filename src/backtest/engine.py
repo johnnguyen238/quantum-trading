@@ -305,6 +305,7 @@ class BacktestEngine:
             dca_multiplier=self._settings.trading.dca_multiplier,
             base_amount=0.01,
             confidence_threshold=self._settings.quantum.confidence_threshold,
+            stop_loss_pct=0.05,
         )
         self._simulator = OrderSimulator(
             fee_rate=self._settings.backtest.fee_rate,

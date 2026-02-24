@@ -28,14 +28,21 @@ class QuantumTrainer:
     ----------
     settings:
         Quantum configuration (optimizer, max_iterations, etc.).
+    batch_size:
+        Number of samples per optimizer iteration. ``0`` = use all samples.
+        Mini-batching dramatically speeds up training for large datasets.
     """
 
-    def __init__(self, settings: "QuantumSettings") -> None:
+    def __init__(
+        self, settings: "QuantumSettings", *, batch_size: int = 500
+    ) -> None:
         self._settings = settings
+        self._batch_size = batch_size
         self._circuit: TrendCircuit | None = None
         self._best_weights: np.ndarray | None = None
         self._best_loss: float = float("inf")
         self._iteration = 0
+        self._rng = np.random.default_rng(42)
 
         # Stored during training for _objective access
         self._train_features: np.ndarray | None = None
@@ -127,25 +134,32 @@ class QuantumTrainer:
     def _objective(self, weights: np.ndarray) -> float:
         """Cost function for the optimizer.
 
-        Computes cross-entropy loss between circuit predictions and labels.
+        Computes cross-entropy loss on a mini-batch of training data.
+        If ``batch_size`` is 0 or >= n_samples, uses the full dataset.
         """
         self._iteration += 1
         qnn = self._circuit.get_qnn()
 
+        n_total = len(self._train_labels)
+        if self._batch_size > 0 and self._batch_size < n_total:
+            idx = self._rng.choice(n_total, self._batch_size, replace=False)
+            features = self._train_features[idx]
+            labels = self._train_labels[idx]
+        else:
+            features = self._train_features
+            labels = self._train_labels
+
         # Forward pass
-        raw_output = qnn.forward(self._train_features, weights)  # (n_samples, 3)
+        raw_output = qnn.forward(features, weights)  # (batch, 3)
 
         # Softmax to get probabilities
         probs = softmax(raw_output, axis=1)
 
-        # Cross-entropy loss: -sum(y_true * log(y_pred))
-        n_samples = len(self._train_labels)
+        # Cross-entropy loss (vectorised)
+        n_samples = len(labels)
         eps = 1e-10
-        loss = 0.0
-        for i in range(n_samples):
-            label = int(self._train_labels[i])
-            loss -= np.log(probs[i, label] + eps)
-        loss /= n_samples
+        label_ints = labels.astype(int)
+        loss = -np.mean(np.log(probs[np.arange(n_samples), label_ints] + eps))
 
         # Track best
         if loss < self._best_loss:
@@ -153,7 +167,7 @@ class QuantumTrainer:
             self._best_weights = weights.copy()
 
         if self._iteration % 10 == 0:
-            logger.debug("Iteration %d: loss=%.4f", self._iteration, loss)
+            logger.info("Iteration %d: loss=%.4f", self._iteration, loss)
 
         return float(loss)
 

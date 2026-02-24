@@ -19,7 +19,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Feature columns extracted for the quantum circuit
-FEATURE_COLS = ["returns", "rsi_norm", "macd_norm", "volume_norm"]
+FEATURE_COLS = [
+    "returns",
+    "rsi_norm",
+    "macd_norm",
+    "volume_norm",
+    "ema_ratio",
+    "bb_position",
+]
 
 
 class FeatureEncoder:
@@ -35,7 +42,7 @@ class FeatureEncoder:
         self._settings = settings
 
     def compute_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Add RSI, MACD, ATR, and returns columns to the DataFrame.
+        """Add RSI, MACD, ATR, EMA ratio, Bollinger Band, and returns columns.
 
         Parameters
         ----------
@@ -75,8 +82,26 @@ class FeatureEncoder:
             fillna=True,
         )
 
+        # EMA ratio: short EMA / long EMA (captures trend direction)
+        ema_fast = out["close"].ewm(span=self._settings.macd_fast, adjust=False).mean()
+        ema_slow = out["close"].ewm(span=self._settings.macd_slow, adjust=False).mean()
+        out["ema_ratio"] = ema_fast / ema_slow
+
+        # Bollinger Band %B: (price - lower) / (upper - lower)
+        bb = ta.volatility.BollingerBands(
+            out["close"], window=20, window_dev=2, fillna=True
+        )
+        bb_upper = bb.bollinger_hband()
+        bb_lower = bb.bollinger_lband()
+        bb_range = bb_upper - bb_lower
+        out["bb_pctb"] = np.where(
+            bb_range > 0, (out["close"] - bb_lower) / bb_range, 0.5
+        )
+
         # Drop rows with NaN from indicator warm-up
-        out = out.dropna(subset=["returns", "rsi", "macd_hist"]).reset_index(drop=True)
+        out = out.dropna(
+            subset=["returns", "rsi", "macd_hist", "ema_ratio", "bb_pctb"]
+        ).reset_index(drop=True)
 
         return out
 
@@ -110,8 +135,9 @@ class FeatureEncoder:
     def _extract_raw(self, df: pd.DataFrame) -> np.ndarray:
         """Pull raw feature values from the indicator DataFrame.
 
-        Returns array of shape ``(n_samples, 4)`` with columns:
-        [returns, rsi_scaled, macd_scaled, volume_scaled].
+        Returns array of shape ``(n_samples, 6)`` with columns:
+        [returns, rsi, macd, volume, ema_ratio, bb_position].
+        All values scaled to ``[0, 1]``.
         """
         returns = df["returns"].values
         rsi = df["rsi"].values / 100.0  # RSI is [0, 100] → [0, 1]
@@ -137,7 +163,18 @@ class FeatureEncoder:
         ret_clipped = np.clip(returns, -0.1, 0.1)
         ret_scaled = (ret_clipped + 0.1) / 0.2  # → [0, 1]
 
-        return np.column_stack([ret_scaled, rsi, macd_scaled * 0.5 + 0.5, vol_scaled])
+        # EMA ratio: clip to [0.95, 1.05] then scale to [0, 1]
+        ema = df["ema_ratio"].values
+        ema_clipped = np.clip(ema, 0.95, 1.05)
+        ema_scaled = (ema_clipped - 0.95) / 0.10  # → [0, 1]
+
+        # Bollinger Band %B: already roughly in [0, 1], clip for safety
+        bb = np.clip(df["bb_pctb"].values, 0.0, 1.0)
+
+        return np.column_stack([
+            ret_scaled, rsi, macd_scaled * 0.5 + 0.5, vol_scaled,
+            ema_scaled, bb,
+        ])
 
     @staticmethod
     def _normalize(features: np.ndarray) -> np.ndarray:
