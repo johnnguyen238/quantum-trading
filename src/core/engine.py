@@ -268,11 +268,17 @@ class TradingEngine:
         self._risk_mgr = RiskManager(self._settings.trading)
         self._leverage_calc = LeverageCalculator(self._settings.trading)
 
-        # Quantum
+        # Quantum — load latest trained model if available
         self._encoder = FeatureEncoder(self._settings.strategy)
+        model_weights_path = self._find_latest_model()
+        if model_weights_path:
+            logger.info("Loading trained model: %s", model_weights_path)
+        else:
+            logger.warning("No trained model found, using random weights")
         self._detector = TrendDetector(
             quantum_settings=self._settings.quantum,
             strategy_settings=self._settings.strategy,
+            model_weights_path=model_weights_path,
         )
         await self._detector.initialize()
 
@@ -286,9 +292,23 @@ class TradingEngine:
                 price=1.0,
             ),
             confidence_threshold=self._settings.quantum.confidence_threshold,
+            stop_loss_pct=0.05,
         )
 
         logger.info("All components initialized")
+
+    @staticmethod
+    def _find_latest_model() -> str | None:
+        """Find the most recently saved model weights in data/models/."""
+        from pathlib import Path
+
+        models_dir = Path("data/models")
+        if not models_dir.exists():
+            return None
+        npy_files = sorted(models_dir.glob("*.npy"), key=lambda p: p.stat().st_mtime)
+        if npy_files:
+            return str(npy_files[-1])
+        return None
 
     async def _shutdown_components(self) -> None:
         """Clean up all resources."""
