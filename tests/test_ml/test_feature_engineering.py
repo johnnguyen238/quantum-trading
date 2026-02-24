@@ -46,7 +46,7 @@ class TestCreateDataset:
     def test_features_shape(self, engineer):
         df = _make_df(100)
         features, labels = engineer.create_dataset(df)
-        assert features.shape[1] == 4  # returns, rsi, macd, volume
+        assert features.shape[1] == 6  # returns, rsi, macd, volume, ema_ratio, bb
 
     def test_features_in_valid_range(self, engineer):
         df = _make_df(100)

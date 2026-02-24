@@ -81,7 +81,7 @@ class TestEncode:
         df = encoder.compute_indicators(sample_df)
         encoded = encoder.encode(df)
         assert encoded.ndim == 2
-        assert encoded.shape[1] == 4  # returns, rsi, macd, volume
+        assert encoded.shape[1] == 6  # returns, rsi, macd, volume, ema_ratio, bb
         assert encoded.shape[0] == len(df)
 
     def test_values_in_range(self, encoder, sample_df):
@@ -96,7 +96,7 @@ class TestEncode:
         assert not np.any(np.isnan(encoded))
 
     def test_feature_columns_constant(self):
-        assert len(FEATURE_COLS) == 4
+        assert len(FEATURE_COLS) == 6
         assert "returns" in FEATURE_COLS[0]
 
 
@@ -105,7 +105,7 @@ class TestEncodeSingle:
         df = encoder.compute_indicators(sample_df)
         single = encoder.encode_single(df)
         assert single.ndim == 1
-        assert single.shape == (4,)
+        assert single.shape == (6,)
 
     def test_values_in_range(self, encoder, sample_df):
         df = encoder.compute_indicators(sample_df)

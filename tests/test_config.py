@@ -9,7 +9,7 @@ class TestSettings:
         settings = load_settings("default")
         assert settings.exchange.name == "bybit"
         assert settings.trading.max_leverage == 10
-        assert settings.quantum.n_qubits == 4
+        assert settings.quantum.n_qubits == 6
 
     def test_load_testnet_profile(self):
         settings = load_settings("testnet")

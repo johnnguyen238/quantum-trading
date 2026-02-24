@@ -110,7 +110,7 @@ class TestTrainPipeline:
 
         features, labels = engineer.create_dataset(df)
         assert len(features) > 0
-        assert features.shape[1] == 4  # matches n_qubits=4
+        assert features.shape[1] == 6  # matches n_qubits=6
 
         # Verify features are in valid range for quantum circuit
         assert np.all(features >= 0)
